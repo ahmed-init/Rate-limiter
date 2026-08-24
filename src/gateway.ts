@@ -1,27 +1,34 @@
-import  express  from "express";
+import express from "express";
+import TokenBucket from "./tokenBucket.js";
 
-const app= express();
+const app = express();
 
-app.get("/api/gate-way",async (req,res)=>{
-    try{
-        console.log("Upstream request received..!")
-        const response = await fetch("http://localhost:4000/api/hello");
-        console.log("Upstream response Status",response.status);
-        const text= await response.json();
-        console.log("Upstream Response",text);
+const bucket = new TokenBucket(10, 10);
 
-        res.send(text);
+app.get("/api/hello", async (req, res) => {
+    const allowed = bucket.allowRequest();
+
+    if (!allowed) {
+        return res.status(429).json({
+            error: "Too Many Requests"
+        });
     }
-    catch(error){
-        console.log(error);
-        res.status(200).json(
-            {
-                message:"Upstream Service unavailable"
-            }
-        );
+
+    try {
+        const response = await fetch("http://localhost:4000/api/hello");
+
+        const data = await response.json();
+
+        res.json(data);
+    } catch (error) {
+        console.error("Upstream error:", error);
+
+        res.status(500).json({
+            error: "Upstream service unavailable"
+        });
     }
 });
 
-app.listen(3000,()=>{
-    console.log(`Api gatway is listening on port ${3000}`);
-})
+app.listen(3000, () => {
+    console.log("API Gateway is listening on port 3000");
+});
