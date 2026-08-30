@@ -1,0 +1,100 @@
+Rate Limiter
+
+*A single client can send 10 requests/sec
+*API gateway says is he/she can able to make another request ,if yes service if no error(too many request)
+*Redis stores that How many request a person made(It stores Ahmed made 7 requests)
+*Gateway checks redis (limit =10,current 7)
+*Gateway allows because 7<10
+*Error if ahmed made the 11th request
+
+
+
+//
+npm init -y
+npm install express 
+npm install -D typescript tsx @types/node @types/express
+
+tsx(directly compiles the typescript instead of compiling to js)
+@types/node(typescript get to know about node like process.env)
+@types/express(typescript get to know about express (req,res))
+npx tsc --init
+
+
+//
+request from the client reaches the gateway
+gateway communicates with the upstream server
+server returns the response
+
+including redis we stores the client and their requests in the 
+key value form (install a library so that node js can communicates with the redis)
+
+not manually creating the redis just use docker-compose.yml file then run that file
+
+docker ps(currently running containers)
+docker ps -a(show all  including stopped ones)
+docker stop <container-name>(stop a container)
+docker start <container-name>(start)
+docker rm <container-name>(to remove a container)
+
+docker logs <container-name>(containers output)
+docker exec -it rate-limit-redis redis-cli(to execute command inside the container)
+
+docker compose up(docker reads the file and creates the required container)
+docker compose down(image remains downloaded containers removed)
+docker compose ps(running container)
+
+
+//
+now we have redis running inside the docker
+now we need redis client to communicate with the node
+so install redis
+
+
+//
+Node.js
+   │
+   │ redis://localhost:6379
+   ▼
+Windows port 6379
+   │
+   │ Docker port mapping
+   ▼
+Redis container port 6379
+   │
+   ▼
+Redis server
+//
+
+for each client there will be a bucket and initialise the bucket with 5 tokens and refill rate will be 1token/sec
+
+
+
+/Token Bucket--->>
+When a request arrives:
+
+1. Check how much time has passed.
+
+2. Give the bucket the tokens it earned
+   during that time.
+
+3. Don't let the bucket exceed its maximum.
+
+4. Do I have at least one token?
+
+   YES:
+       Take one token.
+       Allow the request.
+
+   NO:
+       Reject the request.
+
+
+
+//working node memory bucket 
+we initialised bucket and its capacity and last refill time 
+and executed the application it's working fine 
+now if we are using two gatways we need to have a shared redis memory so we will get into it
+
+
+eventhough if multiple gateway is thereevery client shares the common 
+token bucket in general

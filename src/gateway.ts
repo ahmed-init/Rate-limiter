@@ -20,21 +20,30 @@ app.get("/api/hello", async (req, res) => {
 
         const now = Date.now();
 
-        const result = await redis.eval(luaScript, {
-            keys: [key],
-            arguments: [
-                CAPACITY.toString(),
-                REFILL_RATE.toString(),
-                now.toString()
-            ]
-        });
+        let result;
+        try {
+            result = await redis.eval(luaScript, {
+                keys: [key],
+                arguments: [
+                    CAPACITY.toString(),
+                    REFILL_RATE.toString(),
+                    now.toString()
+                ]
+            });
+        } catch (error) {
+            console.error("Rate limiter unavailable:", error);
+
+            return res.status(503).json({
+                error: "Rate limiter unavailable"
+            });//redis is down so gateway can't check limit
+        }
 
         const allowed = Number((result as number[])[0]);
 
         if (allowed === 0) {
             return res.status(429).json({
                 error: "Too Many Requests"
-            });
+            });//429 means the client exceeded it's token limit
         }
 
         const response = await fetch(
@@ -57,8 +66,9 @@ app.get("/api/hello", async (req, res) => {
 async function start() {
     await connectRedis();
 
-    app.listen(3000, () => {
-        console.log("API Gateway is listening on port 3000");
+    const PORT =Number(process.env.PORT)|| 3000;
+    app.listen(PORT, () => {
+        console.log(`API Gateway is listening on port ${PORT}`);
     });
 }
 
